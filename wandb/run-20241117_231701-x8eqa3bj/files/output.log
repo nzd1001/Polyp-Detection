@@ -1,0 +1,14 @@
+torch.Size([4, 256, 256])
+torch.Size([4, 3, 256, 256])
+Done epoch 0: | Train loss: 0.0509 | Val loss: 0.0518 | Time taken: 17.4002 |
+Done epoch 0: | Train loss: 0.0425 | Val loss: 0.0468 | Time taken: 17.1590 |
+Done epoch 0: | Train loss: 0.0422 | Val loss: 0.0420 | Time taken: 17.1707 |
+Done epoch 1: | Train loss: 0.0406 | Val loss: 0.0438 | Time taken: 16.9286 |
+Done epoch 2: | Train loss: 0.0403 | Val loss: 0.0440 | Time taken: 17.0811 |
+Done epoch 3: | Train loss: 0.0393 | Val loss: 0.0485 | Time taken: 16.8849 |
+Done epoch 4: | Train loss: 0.0393 | Val loss: 0.0432 | Time taken: 16.8618 |
+Done epoch 5: | Train loss: 0.0381 | Val loss: 0.0468 | Time taken: 16.8166 |
+Done epoch 6: | Train loss: 0.0366 | Val loss: 0.0380 | Time taken: 16.8292 |
+Done epoch 7: | Train loss: 0.0369 | Val loss: 0.0370 | Time taken: 17.1130 |
+Done epoch 8: | Train loss: 0.0357 | Val loss: 0.0374 | Time taken: 20.6606 |
+Done epoch 9: | Train loss: 0.0350 | Val loss: 0.0366 | Time taken: 16.9375 |
