@@ -17,15 +17,15 @@ class SegmentationDataset(Dataset):
         img=Image.open(img_name)
         mask=Image.open(mask_name)
         #transform and normalize
-        data=self.transform(img)/255
-        label=self.transform(mask)/255
+        data=self.transform(img)
+        label=self.transform(mask)
         #give red class 0, green class 1 and black class 2
         label=torch.where(label>0.8,1.0,0.0)
         label[2,:,:]=0.0001
         label=torch.argmax(label,dim=0).type(torch.int64)
          #re-map black to class 0, green to class 1 and red to class 2
-        mapping={0:2,1:1,2:0}
-        label.apply_(lambda x:mapping[x])
+        #mapping={0:2,1:1,2:0}
+        #label.apply_(lambda x:mapping[x])
         return data,label
     def __len__(self):
         return len(self.img_list)

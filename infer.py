@@ -1,77 +1,51 @@
-import torch
 import argparse
-import numpy as np
+import torch
+from torchvision import transforms
 from PIL import Image
-import torchvision.transforms as T
-import matplotlib.pyplot as plt
+import os
+import segmentation_models_pytorch as smp
+import torch.nn.functional as F
+from torchvision.transforms import Resize, ToTensor, ToPILImage, Compose, InterpolationMode,Normalize
 
-# Define argument parser
-parser = argparse.ArgumentParser(description="Inference for image segmentation.")
-parser.add_argument("--image_path", type=str, required=True, help="Path to the input image.")
-parser.add_argument("--model_path", type=str, required=True, help="Path to the trained model checkpoint.")
-parser.add_argument("--output_path", type=str, default="output.png", help="Path to save the output image.")
-parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to run the model.")
-args = parser.parse_args()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def get_args():
+    parser = argparse.ArgumentParser(description="Run inference on an image using a segmentation model")
+    parser.add_argument('--image_path', type=str, required=True, help='Path to the input image')
+    return parser.parse_args()
 
-# Define transformations for input image
-def get_transform():
-    return T.Compose([
-        T.ToTensor(),
-        T.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
-    ])
-
-# Function to map class predictions to RGB colors
-def decode_segmentation(segmentation, colormap):
-    h, w = segmentation.shape
-    decoded_img = np.zeros((h, w, 3), dtype=np.uint8)
-    for class_id, color in colormap.items():
-        decoded_img[segmentation == class_id] = color
-    return decoded_img
-
-# Define colormap (modify according to your classes)
-COLORMAP = {
-    0: [0, 0, 0],       # Background -> Black
-    1: [255, 0, 0],     # Class 1 -> Red
-    2: [0, 255, 0],     # Class 2 -> Green
-    # Add more classes if needed
-}
-
+# Load model
+def load_model():
+    model=smp.UnetPlusPlus(
+    encoder_name="resnet34",
+    encoder_weights="imagenet",
+    in_channels=3,
+    classes=3   
+)
+    checkpoint=torch.load("model/model.pth",weights_only=True)
+    model.load_state_dict(checkpoint["model"])
+    model=model.to(device)
+    model.eval()  
+    return model
+def preprocess_image(image_path):
+    img=Image.open(image_path)
+    transform = Compose([Resize((256,256),interpolation=InterpolationMode.BILINEAR),
+                   ToTensor(),Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])])
+    h=img.size[1]
+    w=img.size[0]
+    data=transform(img)
+    return data.unsqueeze(0).to(device),h,w
 def main():
-    # Load the model
-    device = args.device
-    model = torch.load(args.model_path, map_location=device)
-    model.eval()  # Set model to evaluation mode
-
-    # Load and preprocess the image
-    image = Image.open(args.image_path).convert("RGB")
-    transform = get_transform()
-    input_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension
-
-    # Perform inference
+    args = get_args()
+    model = load_model()
+    data,h,w = preprocess_image(args.image_path)
     with torch.no_grad():
-        output = model(input_tensor)  # Output shape: [1, num_classes, H, W]
-        prediction = torch.argmax(output.squeeze(0), dim=0).cpu().numpy()  # Shape: [H, W]
+        mask=model(data)
+        mask=mask.squeeze(0).cpu()
+        one_hot_mask=(F.one_hot(torch.argmax(mask, 0)).permute(2,0,1).float()) #convert mask to image
+        one_hot_mask[2,:,:]=0 #convert blue to black
+        mask2image=ToPILImage()(one_hot_mask)
+        final_image=Resize((h, w), interpolation=InterpolationMode.NEAREST)(mask2image) #resize to original size
+        final_image.save("./output_mask.png")
 
-    # Decode segmentation mask to RGB
-    segmented_image = decode_segmentation(prediction, COLORMAP)
-
-    # Save and display the output
-    output_image = Image.fromarray(segmented_image)
-    output_image.save(args.output_path)
-    print(f"Segmented image saved at: {args.output_path}")
-
-    # Optionally, show the input and output side by side
-    plt.figure(figsize=(10, 5))
-    plt.subplot(1, 2, 1)
-    plt.title("Input Image")
-    plt.imshow(image)
-    plt.axis("off")
-
-    plt.subplot(1, 2, 2)
-    plt.title("Segmented Output")
-    plt.imshow(segmented_image)
-    plt.axis("off")
-    plt.show()
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
